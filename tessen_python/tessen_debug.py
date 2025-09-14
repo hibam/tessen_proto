@@ -92,14 +92,18 @@ async def debug_tessen_sensor():
         # 6. 알림 설정 시도
         print("\n6. 알림 설정 시도...")
         try:
+            print(f"   알림 설정 대상: {SENSOR_DATA_CHAR_UUID}")
+            print(f"   핸들러 함수: {notification_handler}")
+
             await client.start_notify(SENSOR_DATA_CHAR_UUID, notification_handler)
             print("✅ 알림 설정 성공!")
 
-            print("\n📡 센서 데이터 수신 대기 중... (10초)")
+            print("\n📡 센서 데이터 수신 대기 중... (30초)")
             print("   라켓을 움직여보세요!")
+            print("   notification_handler가 호출되면 데이터가 출력됩니다!")
 
-            # 10초 대기
-            await asyncio.sleep(10)
+            # 30초 대기
+            await asyncio.sleep(30)
 
             await client.stop_notify(SENSOR_DATA_CHAR_UUID)
             print("📡 알림 중지")
@@ -117,14 +121,16 @@ async def debug_tessen_sensor():
 
 def notification_handler(sender, data):
     """알림 핸들러"""
+    print(f"🎯 notification_handler 호출됨!")
     print(f"📊 데이터 수신: {len(data)} bytes")
     print(f"   데이터: {data.hex()}")
+    print(f"   발신자: {sender}")
 
-    # 14바이트 데이터인지 확인
-    if len(data) == 14:
-        print("   ✅ 예상 데이터 크기 (14 bytes)")
+    # 14바이트 데이터인지 확인 (64바이트 버퍼에서 실제 데이터는 14바이트)
+    if len(data) >= 14:
+        print("   ✅ 충분한 데이터 크기 (14+ bytes)")
         try:
-            # 7개 int16 값 파싱
+            # 7개 int16 값 파싱 (처음 14바이트만 사용)
             values = struct.unpack('<7h', data[:14])
             print(f"   파싱된 값: {values}")
             print(f"   가속도: X={values[0]/1000.0:.3f}, Y={values[1]/1000.0:.3f}, Z={values[2]/1000.0:.3f} m/s²")
@@ -133,7 +139,7 @@ def notification_handler(sender, data):
         except Exception as e:
             print(f"   ❌ 데이터 파싱 오류: {e}")
     else:
-        print(f"   ⚠️  예상과 다른 크기 (예상: 14 bytes)")
+        print(f"   ⚠️  데이터 크기 부족 (예상: 14+ bytes)")
 
 if __name__ == "__main__":
     asyncio.run(debug_tessen_sensor())

@@ -30,9 +30,15 @@ async def scan_all_devices():
         print(f"    주소: {device.address}")
         print(f"    RSSI: {rssi} dBm")
 
+        # 광고 데이터 상세 정보
+        if hasattr(device, 'metadata') and device.metadata:
+            print(f"    메타데이터: {device.metadata}")
+
         # TESSEN 관련 디바이스 강조
         if "TESSEN" in name.upper() or "TENNIS" in name.upper():
             print("    🎾 TESSEN 관련 디바이스!")
+        elif "XIAO" in name.upper() or "NRF52840" in name.upper():
+            print("    🔧 XIAO BLE 관련 디바이스!")
 
         print()
 

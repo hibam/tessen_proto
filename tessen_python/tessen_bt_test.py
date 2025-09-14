@@ -84,11 +84,12 @@ class TessenSensor:
         """센서 데이터 파싱"""
         try:
             # 14바이트 데이터 구조 파싱 (7개 int16 값)
-            if len(data) != 14:
-                print(f"⚠️  예상 데이터 크기와 다름: {len(data)} bytes (예상: 14 bytes)")
+            # 64바이트 버퍼에서 실제 데이터는 14바이트
+            if len(data) < 14:
+                print(f"⚠️  데이터 크기 부족: {len(data)} bytes (최소: 14 bytes)")
                 return None
 
-            # 7개 int16 값 파싱
+            # 7개 int16 값 파싱 (처음 14바이트만 사용)
             values = struct.unpack('<7h', data[:14])
 
             # 스케일링 적용 (펌웨어에서 1000배, 100배로 전송)
@@ -119,13 +120,13 @@ class TessenSensor:
 
         self.data_count += 1
 
-        # 5개마다 한 번씩 출력 (20Hz 전송이므로 더 자주 출력)
-        if self.data_count % 5 == 0:
+        # 매번 출력 (10Hz 전송)
+        if True:  # 모든 데이터 출력
             # 가속도와 자이로 크기 계산
             accel_magnitude = (data['accel']['x']**2 + data['accel']['y']**2 + data['accel']['z']**2)**0.5
             gyro_magnitude = (data['gyro']['x']**2 + data['gyro']['y']**2 + data['gyro']['z']**2)**0.5
 
-            print(f"\n📊 센서 데이터 #{self.data_count}")
+            print(f"\n 센서 데이터 #{self.data_count}")
             print(f"   시간: {data['elapsed_time']:.2f}s")
             print(f"   가속도: X={data['accel']['x']:7.3f}, Y={data['accel']['y']:7.3f}, Z={data['accel']['z']:7.3f} m/s² (크기: {accel_magnitude:5.2f})")
             print(f"   자이로:  X={data['gyro']['x']:7.3f}, Y={data['gyro']['y']:7.3f}, Z={data['gyro']['z']:7.3f} rad/s (크기: {gyro_magnitude:5.2f})")
