@@ -1,0 +1,9 @@
+sample:
+  name: TESSEN Tennis Sensor sample
+tests:
+  sample.sensor.tessen:
+    build_only: true
+    tags: sensors
+    filter: dt_alias_exists("6dof-motion-drdy0")
+    integration_platforms:
+      - nrf52dk/nrf52832

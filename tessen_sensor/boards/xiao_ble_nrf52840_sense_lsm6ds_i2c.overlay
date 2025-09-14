@@ -1,0 +1,47 @@
+/*
+ * Copyright (c) 2024, TDK Invensense
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Get a node identifier for 6-axis IMU sensor.
+ */
+/ {
+	aliases {
+		6dof-motion-drdy0 = &lsm6ds3tr_c;
+	};
+
+	chosen {
+		zephyr,console = &cdc_acm_uart0;
+	};
+};
+
+&zephyr_udc0 {
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};
+
+/*
+ * Example configuration of a LSM6DS3TR-C device on i2c0.
+ *
+ * Device address 0x6A is assumed. Your device may have a different
+ * address; check your device documentation if unsure.
+ */
+&i2c0 {
+	status = "okay";
+	lsm6ds3tr_c: lsm6ds3tr-c@6a {
+		compatible = "st,lsm6dsl";
+		reg = <0x6a>;
+		irq-gpios = <&gpio0 11 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+/*
+ * Increase native UART speed to report all IMU data at 100Hz.
+ */
+&uart0 {
+	compatible = "nordic,nrf-uarte";
+	current-speed = <1000000>;
+};
