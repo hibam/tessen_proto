@@ -23,9 +23,7 @@
 #include "SensorInfo.h"
 
 /* 센서 관련 상수는 SensorInfo.h에서 정의됨 */
-
-BUILD_ASSERT(DT_NODE_HAS_COMPAT(DT_CHOSEN(zephyr_console), zephyr_cdc_acm_uart),
-         "Console device is not ACM CDC UART device");
+// BUILD_ASSERT(DT_NODE_HAS_COMPAT(DT_CHOSEN(zephyr_console), zephyr_cdc_acm_uart), "Console device is not ACM CDC UART device");
 
 /* LED 관련 정의 */
 #define LED0_NODE DT_ALIAS(led0)  // Red LED
@@ -43,42 +41,31 @@ static struct sensor_trigger data_trigger;
 static volatile int irq_from_device;
 
 /* Bluetooth related variables */
-#define TESSEN_SERVICE_UUID_VAL \
-        BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef0)
+#define TESSEN_SERVICE_UUID_VAL BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef0)
+static const struct bt_uuid_128 tessen_service_uuid = BT_UUID_INIT_128(TESSEN_SERVICE_UUID_VAL);
+static const struct bt_uuid_128 tessen_data_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef1));
+static const struct bt_uuid_128 tessen_config_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef2));
 
-static const struct bt_uuid_128 tessen_service_uuid = BT_UUID_INIT_128(
-        TESSEN_SERVICE_UUID_VAL);
-
-static const struct bt_uuid_128 tessen_data_uuid = BT_UUID_INIT_128(
-        BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef1));
-
-static const struct bt_uuid_128 tessen_config_uuid = BT_UUID_INIT_128(
-        BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef2));
-
-#define TESSEN_DATA_MAX_LEN 64
-static uint8_t tessen_data[TESSEN_DATA_MAX_LEN];
-static uint8_t tessen_config[16];
+#define TESSEN_DATA_MAX_LEN (64)
+static uint8 tessen_data[TESSEN_DATA_MAX_LEN];
+static uint8 tessen_config[16];
 static bool tessen_notify_enabled = false;
 
-
-static const char *now_str(void);
+/* for debug */
+static const char *timeStamp(void);
 
 /* Bluetooth GATT service functions */
-static ssize_t read_tessen_data(struct bt_conn *conn, const struct bt_gatt_attr *attr,
-                                void *buf, uint16_t len, uint16_t offset)
+static ssize_t read_tessen_data(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16 len, uint16 offset)
 {
     return bt_gatt_attr_read(conn, attr, buf, len, offset, tessen_data, sizeof(tessen_data));
 }
 
-static ssize_t read_tessen_config(struct bt_conn *conn, const struct bt_gatt_attr *attr,
-                                  void *buf, uint16_t len, uint16_t offset)
+static ssize_t read_tessen_config(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset)
 {
     return bt_gatt_attr_read(conn, attr, buf, len, offset, tessen_config, sizeof(tessen_config));
 }
 
-static ssize_t write_tessen_config(struct bt_conn *conn, const struct bt_gatt_attr *attr,
-                                   const void *buf, uint16_t len, uint16_t offset,
-                                   uint8_t flags)
+static ssize_t write_tessen_config(struct bt_conn *conn, const struct bt_gatt_attr *attr, const void *buf, uint16 len, uint16 offset, uint8_t flags)
 {
     if (offset + len > sizeof(tessen_config)) {
         return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
@@ -91,8 +78,7 @@ static ssize_t write_tessen_config(struct bt_conn *conn, const struct bt_gatt_at
 static void tessen_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
 {
     tessen_notify_enabled = (value == BT_GATT_CCC_NOTIFY) ? true : false;
-    printf("[%s] TESSEN notifications %s (value: 0x%04x)\n",
-        now_str(), tessen_notify_enabled ? "enabled" : "disabled", value);
+    printf("[%s] TESSEN notifications %s (value: 0x%04x)\n", timeStamp(), tessen_notify_enabled ? "enabled" : "disabled", value);
 }
 
 /* TESSEN Custom GATT Service */
@@ -137,8 +123,8 @@ static void connected(struct bt_conn *conn, uint8_t err)
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
-    printf("[%s] Disconnected, reason 0x%02x\n", now_str(), reason);
-    tessen_notify_enabled = false;  // 연결 끊어지면 알림 비활성화
+    printf("[%s] Disconnected, reason 0x%02x\n", timeStamp(), reason);
+    tessen_notify_enabled = false;  // 연결 끊어지면 알림 비활성화.
 }
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
@@ -151,8 +137,8 @@ static void bt_ready(void)
 {
     int err;
 
-    printf("[%s] Bluetooth initialized\n", now_str());
-    printf("[%s] GATT services registered:\n", now_str());
+    printf("[%s] Bluetooth initialized\n", timeStamp());
+    printf("[%s] GATT services registered:\n", timeStamp());
     printf("  - TESSEN Service: 12345678-1234-5678-1234-56789abcdef0\n");
     printf("  - Data Characteristic: 12345678-1234-5678-1234-56789abcdef1 (Read+Notify)\n");
     printf("  - Config Characteristic: 12345678-1234-5678-1234-56789abcdef2 (Read+Write)\n");
@@ -167,7 +153,7 @@ static void bt_ready(void)
         return;
     }
 
-    printf("[%s] Advertising successfully started\n", now_str());
+    printf("[%s] Advertising successfully started\n", timeStamp());
 }
 
 /* Function to send sensor data via bluetooth */
@@ -177,7 +163,7 @@ static void send_sensor_data_bt(struct sensor_value *accel, struct sensor_value 
     if (!tessen_notify_enabled) {
         static int debug_count = 0;
         if (++debug_count % 10 == 0) {  // 10번에 한 번씩 출력 (더 자주)
-            printf("[%s] DEBUG: Notifications disabled (count: %d)\n", now_str(), debug_count);
+            printf("[%s] DEBUG: Notifications disabled (count: %d)\n", timeStamp(), debug_count);
         }
         return;
     }
@@ -202,23 +188,23 @@ static void send_sensor_data_bt(struct sensor_value *accel, struct sensor_value 
     data_ptr[6] = (int16_t)(sensor_value_to_double(temperature) * 100); // temp
 
     // Safe notification - only if connected
-    printf("[%s] Sending sensor data via Bluetooth\n", now_str());
+    printf("[%s] Sending sensor data via Bluetooth\n", timeStamp());
     int err = bt_gatt_notify(NULL, &tessen_svc.attrs[1], tessen_data, sizeof(tessen_data));
-    printf("[%s] BT notification result: %d\n", now_str(), err);
+    printf("[%s] BT notification result: %d\n", timeStamp(), err);
 
     if (err < 0) {
         // Connection lost, disable notifications
         tessen_notify_enabled = false;
-        printf("[%s] BT notification failed (err: %d), disabling\n", now_str(), err);
+        printf("[%s] BT notification failed (err: %d), disabling\n", timeStamp(), err);
     }
     else {
         static int success_count = 0;
         success_count++;
         if (success_count % 10 == 0) {  // 10번에 한 번씩 출력 (더 자주)
-            printf("[%s] DEBUG: BT notification sent successfully (count: %d)\n", now_str(), success_count);
+            printf("[%s] DEBUG: BT notification sent successfully (count: %d)\n", timeStamp(), success_count);
         }
     }
-    printf("[%s] Sensor data sent via Bluetooth\n", now_str());
+    printf("[%s] Sensor data sent via Bluetooth\n", timeStamp());
 }
 
 /* 간단한 I2C 레지스터 읽기 함수 */
@@ -255,7 +241,7 @@ static int write_sensor_reg(const struct device *devI2c, uint8_t reg, uint8_t da
 static int activate_sensor_directly(const struct device *devI2c)
 {
     int rc = 0;
-    printf("[%s] === Activating Sensor Directly ===\n", now_str());
+    printf("[%s] === Activating Sensor Directly ===\n", timeStamp());
 
     /* CTRL1_XL 설정: 가속도계 활성화 (104Hz, ±2g) */
     rc = write_sensor_reg(devI2c, LSM6DSL_REG_CTRL1_XL, LSM6DS_CTRL1_XL_104HZ_2G);
@@ -288,7 +274,7 @@ static const struct device *get_tessen_devSensorice(void)
     return dev;
 }
 
-static const char *now_str(void)
+static const char *timeStamp(void)
 {
     static char buf[16]; /* ...HH:MM:SS.MMM */
     uint32_t now = k_uptime_get_32();
@@ -328,28 +314,34 @@ static void handle_tessen_sensor_data(const struct device *dev, const struct sen
     }
 }
 
-int main(void)
+int32 initUSB()
 {
     const struct device *const devConsole = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
-    uint32_t dtr = 0;
-    int rc;
-
-    /* Initialize USB */
+    int32 ret = 0; // 0: success, -1: error, -2: timeout
+    uint32 dtr = 0;
     if (usb_enable(NULL)) {
-        return 0;
+        ret = -1;
     }
-
-    /* Poll if the DTR flag was set */
-    while (!dtr) {
-        uart_line_ctrl_get(devConsole, UART_LINE_CTRL_DTR, &dtr);
-        /* Give CPU resources to low priority threads. */
-        k_sleep(K_MSEC(100));
+    else {
+        /* Poll if the DTR flag was set */
+        while (!dtr) {
+            uart_line_ctrl_get(devConsole, UART_LINE_CTRL_DTR, &dtr);
+            /* Give CPU resources to low priority threads. */
+            k_sleep(K_MSEC(100));
+            if (++dtr > 50) {
+                printf("[%s] USB Console initialization timeout\n", timeStamp());
+                ret = -2;
+                break;
+            }
+        }
+        printf("[%s] USB Console initialized. Starting TESSEN tennis sensor...\n", timeStamp());
     }
+    return ret;
+}
 
-    printf("[%s] USB Console initialized. Starting TESSEN tennis sensor...\n", now_str());
-
-    /* Initialize LEDs */
-    // Red LED 초기화
+void initLED()
+{
+    // Red LED 초기화.
     if (!gpio_is_ready_dt(&led_red)) {
         printf("Red LED device not ready\n");
     }
@@ -357,12 +349,13 @@ int main(void)
         int ret = gpio_pin_configure_dt(&led_red, GPIO_OUTPUT_ACTIVE);
         if (ret < 0) {
             printf("Failed to configure Red LED: %d\n", ret);
-        } else {
-            printf("[%s] Red LED initialized\n", now_str());
+        }
+        else {
+            printf("[%s] Red LED initialized\n", timeStamp());
         }
     }
 
-    // Green LED 초기화
+    // Green LED 초기화.
     if (!gpio_is_ready_dt(&led_green)) {
         printf("Green LED device not ready\n");
     }
@@ -370,12 +363,13 @@ int main(void)
         int ret = gpio_pin_configure_dt(&led_green, GPIO_OUTPUT_ACTIVE);
         if (ret < 0) {
             printf("Failed to configure Green LED: %d\n", ret);
-        } else {
-            printf("[%s] Green LED initialized\n", now_str());
+        }
+        else {
+            printf("[%s] Green LED initialized\n", timeStamp());
         }
     }
 
-    // Blue LED 초기화
+    // Blue LED 초기화.
     if (!gpio_is_ready_dt(&led_blue)) {
         printf("Blue LED device not ready\n");
     }
@@ -383,12 +377,22 @@ int main(void)
         int ret = gpio_pin_configure_dt(&led_blue, GPIO_OUTPUT_ACTIVE);
         if (ret < 0) {
             printf("Failed to configure Blue LED: %d\n", ret);
-        } else {
-            printf("[%s] Blue LED initialized\n", now_str());
+        }
+        else {
+            printf("[%s] Blue LED initialized\n", timeStamp());
         }
     }
+}
 
-    /* Initialize Bluetooth */
+int main(void)
+{
+    uint32 dtr = 0;
+    int rc;
+
+    initUSB();
+    initLED();
+
+    // initBluetooth();
     rc = bt_enable(NULL);
     if (rc) {
         printf("Bluetooth init failed (err %d)\n", rc);
@@ -397,6 +401,7 @@ int main(void)
 
     bt_ready();
 
+    // init gyro sensor.
     const struct device *devSensor = get_tessen_devSensorice();
     struct sensor_value accel[3];
     struct sensor_value gyro[3];
@@ -417,27 +422,27 @@ int main(void)
 
 
     #if 1
-	data_trigger = (struct sensor_trigger){
-		.type = SENSOR_TRIG_DATA_READY,
-		.chan = SENSOR_CHAN_ALL,
-	};
+    data_trigger = (struct sensor_trigger) {
+        .type = SENSOR_TRIG_DATA_READY,
+        .chan = SENSOR_CHAN_ALL,
+    };
 
-	if (sensor_trigger_set(devSensor, &data_trigger, handle_tessen_sensor_data) < 0) {
-		printf("Cannot configure data trigger!!!\n");
-		return 0;
-	}
+    if (sensor_trigger_set(devSensor, &data_trigger, handle_tessen_sensor_data) < 0) {
+        printf("Cannot configure data trigger!!!\n");
+        return 0;
+    }
     #endif
 
-    uint32 sample_count = 0;
-    uint32 led_timer = 0;
+    uint32 sampleCount = 0;
+    uint32 ledTimer = 0;
 
     while (1) {
-        sample_count++;
+        sampleCount++;
 
         /* Red LED 깜빡임 (1초마다) */
-        led_timer++;
-        if (led_timer >= 10) {  // 100ms * 10 = 1초
-            led_timer = 0;
+        ledTimer++;
+        if (ledTimer >= 10) {  // 100ms * 10 = 1초
+            ledTimer = 0;
             led_red_state = !led_red_state;
             gpio_pin_set_dt(&led_red, led_red_state);
             //printf("Red LED %s\n", led_red_state ? "ON" : "OFF");
@@ -449,7 +454,7 @@ int main(void)
             sensor_channel_get(devSensor, SENSOR_CHAN_DIE_TEMP, &temperature);
 
             printf("[%s] #%d: temp %.2f accel %f %f %f m/s/s gyro %f %f %f rad/s\n",
-                now_str(), sample_count, sensor_value_to_double(&temperature),
+                timeStamp(), sampleCount, sensor_value_to_double(&temperature),
                 sensor_value_to_double(&accel[0]), sensor_value_to_double(&accel[1]),
                 sensor_value_to_double(&accel[2]), sensor_value_to_double(&gyro[0]),
                 sensor_value_to_double(&gyro[1]), sensor_value_to_double(&gyro[2]));

@@ -56,7 +56,9 @@ typedef enum _TESSEN_RESULT {
     TESSEN_NOT_INITIALIZED, /* 초기화되지 않음 */
     TESSEN_TIMEOUT,         /* 타임아웃 */
     TESSEN_BUSY,            /* 바쁨 */
-    TESSEN_NOT_SUPPORTED    /* 지원되지 않음 */
+    TESSEN_NOT_SUPPORTED,   /* 지원되지 않음 */
+
+    TESSEN_RESULT_MAX
 } TESSEN_RESULT;
 
 

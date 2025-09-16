@@ -59,7 +59,9 @@ typedef enum _DEBUG_LEVEL {
     DEBUG_LEVEL_ERROR,
     DEBUG_LEVEL_WARNING,
     DEBUG_LEVEL_INFO,
-    DEBUG_LEVEL_DEBUG
+    DEBUG_LEVEL_DEBUG,
+
+    DEBUG_LEVEL_MAX
 } DEBUG_LEVEL;
 
 /* 디버그 매크로 (나중에 구현) */
