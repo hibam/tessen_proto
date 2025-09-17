@@ -1,23 +1,22 @@
-#include <zephyr/kernel.h>
-#include <zephyr/device.h>
-#include <zephyr/devicetree.h>
-#include <zephyr/drivers/sensor.h>
-#include <zephyr/usb/usb_device.h>
-#include <zephyr/drivers/uart.h>
-#include <zephyr/drivers/i2c.h>
-#include <zephyr/drivers/gpio.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/i2c.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/drivers/uart.h>
+#include <zephyr/usb/usb_device.h>
+
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
-#include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
-#include <zephyr/bluetooth/services/bas.h>
-#include <zephyr/bluetooth/services/dis.h>
 #include <zephyr/settings/settings.h>
 
+// 사용자 정의 헤더
 #include "Type.h"
 #include "Const.h"
 #include "SensorInfo.h"
@@ -193,9 +192,10 @@ static void send_sensor_data_bt(struct sensor_value *accel, struct sensor_value 
     printf("[%s] BT notification result: %d\n", timeStamp(), err);
 
     if (err < 0) {
-        // Connection lost, disable notifications
-        tessen_notify_enabled = false;
-        printf("[%s] BT notification failed (err: %d), disabling\n", timeStamp(), err);
+        // A notification error doesn't necessarily mean the connection is lost.
+        // It could be a temporary issue like a full buffer.
+        // The 'disconnected' callback is the reliable place to manage connection state.
+        printf("[%s] BT notification failed (err: %d)\n", timeStamp(), err);
     }
     else {
         static int success_count = 0;
