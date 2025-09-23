@@ -167,12 +167,7 @@ static void send_sensor_data_bt(struct sensor_value *accel, struct sensor_value 
         return;
     }
 
-    // 전송 속도 제한: 100Hz -> 10Hz (10번에 1번만 전송)
-    static uint32_t skip_count = 0;
-    skip_count++;
-    if (skip_count % 10 != 0) {
-        return;
-    }
+    /* BUG FIX: 1Hz 속도 제한 로직 제거 */
 
     // Pack sensor data into tessen_data buffer
     // Format: [accel_x][accel_y][accel_z][gyro_x][gyro_y][gyro_z][temp]
@@ -188,7 +183,7 @@ static void send_sensor_data_bt(struct sensor_value *accel, struct sensor_value 
 
     // Safe notification - only if connected
     printf("[%s] Sending sensor data via Bluetooth\n", timeStamp());
-    int err = bt_gatt_notify(NULL, &tessen_svc.attrs[1], tessen_data, sizeof(tessen_data));
+    int err = bt_gatt_notify(NULL, &tessen_svc.attrs[1], tessen_data, 14);
     printf("[%s] BT notification result: %d\n", timeStamp(), err);
 
     if (err < 0) {
@@ -302,9 +297,8 @@ static void handle_tessen_sensor_data(const struct device *dev, const struct sen
         int rc = sensor_sample_fetch_chan(dev, trig->chan);
 
         if (rc < 0) {
-            printf("sample fetch failed: %d\n", rc);
-            printf("cancelling trigger due to failure: %d\n", rc);
-            (void)sensor_trigger_set(dev, trig, NULL);
+            printf("sample fetch failed: %d, not cancelling trigger.\n", rc);
+            //(void)sensor_trigger_set(dev, trig, NULL); // BUG FIX: DO NOT DISABLE IRQ
             return;
         }
         else if (rc == 0) {
